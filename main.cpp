@@ -1,21 +1,26 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 int main()
 {
-    std::vector<std::string> streams = {
-        "rtsp:/192.168.",
-        "",
-        "",
-        ""
-        };
-    std::vector<std::string> outputs = {
-        "",
-        "",
-        "",
-        ""
-        };
+    std::ifstream ip_list("../ip.txt") ;
+
+    std::vector<std::string> streams;
+    std::string tmp;
+
+    while(getline(ip_list, tmp))
+        {
+	    std::cout << "Detected ip: " << tmp << std::endl;
+	    streams.push_back(tmp);
+	}
+
+
+    std::vector<std::string> outputs;
+    for(size_t i = 0; i < streams.size(); i++){
+        outputs.push_back(streams[i] + ".mp4");
+    }
 
     std::vector<cv::VideoCapture> video_captures(streams.size());
     std::vector<cv::VideoWriter> video_writers(streams.size());
