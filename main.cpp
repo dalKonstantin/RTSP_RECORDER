@@ -89,8 +89,14 @@ int main() {
     std::string outputDir = "Videos/" + timestamp;
     fs::create_directories(outputDir);
 
-    int frameWidth = 640, frameHeight = 480;
-    double fps = 25.0;
+    cv::VideoCapture capture(rtspUrls[0]);
+
+    int codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
+    int frameWidth = static_cast<int>(capture.get(cv::CAP_PROP_FRAME_WIDTH));
+    int frameHeight = static_cast<int>(capture.get(cv::CAP_PROP_FRAME_HEIGHT));
+    double fps =30.0;
+
+    capture.release();
 
     // Флаг для остановки записи
     std::mutex stopMutex;
