@@ -7,8 +7,19 @@
 #include <thread>
 #include <mutex>
 #include <ctime>
+#include <csignal>
 
 namespace fs = std::filesystem;
+
+
+bool stopFlag = false; // Глобальный флаг завершения
+
+// Обработчик сигнала
+void signalHandler(int signum) {
+    std::cout << "\nПолучен сигнал (" << signum << "). Завершаем запись..." << std::endl;
+    stopFlag = true;
+}
+
 
 std::string getCurrentTimestamp() {
     time_t now = time(nullptr);
@@ -51,6 +62,9 @@ void recordCamera(const std::string &rtspUrl, const std::string &outputFile, int
 }
 
 int main() {
+
+    std::signal(SIGINT, signalHandler);
+
     // Чтение RTSP-URL'ов из файла
     const std::string ipFile = "ip.txt";
     std::ifstream inputFile(ipFile);
@@ -79,7 +93,6 @@ int main() {
     double fps = 25.0;
 
     // Флаг для остановки записи
-    bool stopFlag = false;
     std::mutex stopMutex;
 
     // Запуск потоков для каждой камеры
@@ -87,15 +100,6 @@ int main() {
     for (size_t i = 0; i < rtspUrls.size(); ++i) {
         std::string outputFile = outputDir + "/cam" + std::to_string(i + 1) + ".mp4";
         threads.emplace_back(recordCamera, rtspUrls[i], outputFile, frameWidth, frameHeight, fps, std::ref(stopFlag));
-    }
-
-    // Проверка нажатия клавиши для завершения
-    std::cout << "Начало записи... Нажмите 'q' для завершения." << std::endl;
-    while (!stopFlag) {
-        int key = cv::waitKey(30); // Ждем 30 мс
-        if (key == 'q') {
-            stopFlag = true;
-        }
     }
 
     // Ожидание завершения всех потоков
