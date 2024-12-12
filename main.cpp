@@ -72,7 +72,7 @@ int main() {
     }
 
     std::string timestamp = getCurrentTimestamp();
-    std::string outputDir = "~/Videos/RTSPRECORDER/" + timestamp;
+    std::string outputDir = "/Videos/" + timestamp;
     fs::create_directories(outputDir);
 
     int frameWidth = 640, frameHeight = 480;
