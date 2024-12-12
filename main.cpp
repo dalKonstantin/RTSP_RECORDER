@@ -91,11 +91,10 @@ int main() {
 
     // Проверка нажатия клавиши для завершения
     std::cout << "Начало записи... Нажмите 'q' для завершения." << std::endl;
-    while (true) {
-        if (cv::waitKey(100) == 'q') {
-            std::lock_guard<std::mutex> lock(stopMutex);
+    while (!stopFlag) {
+        int key = cv::waitKey(30); // Ждем 30 мс
+        if (key == 'q') {
             stopFlag = true;
-            break;
         }
     }
 
