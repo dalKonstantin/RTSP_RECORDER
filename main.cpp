@@ -6,20 +6,22 @@
 #include <opencv2/opencv.hpp>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 #include <ctime>
 #include <csignal>
 
 namespace fs = std::filesystem;
 
-
 bool stopFlag = false; // Глобальный флаг завершения
+bool startFlag = false; // Флаг начала записи
+std::mutex startMutex;  // Мьютекс для синхронизации старта
+std::condition_variable startCondition; // Условие старта
 
 // Обработчик сигнала
 void signalHandler(int signum) {
     std::cout << "\nПолучен сигнал (" << signum << "). Завершаем запись..." << std::endl;
     stopFlag = true;
 }
-
 
 std::string getCurrentTimestamp() {
     time_t now = time(nullptr);
@@ -42,6 +44,12 @@ void recordCamera(const std::string &rtspUrl, const std::string &outputFile, int
         return;
     }
 
+    // Ждём, пока основной поток даст сигнал на старт
+    {
+        std::unique_lock<std::mutex> lock(startMutex);
+        startCondition.wait(lock, [] { return startFlag; });
+    }
+
     std::cout << "Начало записи с камеры: " << rtspUrl << " в файл " << outputFile << std::endl;
 
     while (!stopFlag) {
@@ -62,7 +70,6 @@ void recordCamera(const std::string &rtspUrl, const std::string &outputFile, int
 }
 
 int main() {
-
     std::signal(SIGINT, signalHandler);
 
     // Чтение RTSP-URL'ов из файла
@@ -94,12 +101,9 @@ int main() {
     int codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
     int frameWidth = static_cast<int>(capture.get(cv::CAP_PROP_FRAME_WIDTH));
     int frameHeight = static_cast<int>(capture.get(cv::CAP_PROP_FRAME_HEIGHT));
-    double fps =30.0;
+    double fps = 30.0;
 
     capture.release();
-
-    // Флаг для остановки записи
-    std::mutex stopMutex;
 
     // Запуск потоков для каждой камеры
     std::vector<std::thread> threads;
@@ -107,6 +111,13 @@ int main() {
         std::string outputFile = outputDir + "/cam" + std::to_string(i + 1) + ".mp4";
         threads.emplace_back(recordCamera, rtspUrls[i], outputFile, frameWidth, frameHeight, fps, std::ref(stopFlag));
     }
+
+    // Сигнализируем потокам о старте записи
+    {
+        std::lock_guard<std::mutex> lock(startMutex);
+        startFlag = true;
+    }
+    startCondition.notify_all();
 
     // Ожидание завершения всех потоков
     for (auto &thread : threads) {
